@@ -50,8 +50,8 @@ class Node (node_pb2_grpc.ChainReplicationService):
         self.chain = Chain()
         self.chain.processes = request.chain
         return node_pb2.ChainAcceptedResponse(accepted=True)
-    def IsAliveCheck(self, request, context):
 
+    def IsAliveCheck(self, request, context):
         return node_pb2.IsAliveResponse(alive=True)
 
     def list_chain(self):
