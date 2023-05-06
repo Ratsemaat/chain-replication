@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+
+service ChainReplicationService {
+  rpc IsAliveCheck (Empty) returns (IsAliveResponse) {}
+  rpc GetDataStores (Empty) returns (DataStoreList){}
+  rpc TransferChain (Chain) returns (ChainAcceptedResponse){}
+}
+
+message Empty {}
+
+
+message IsAliveResponse {
+  bool alive = 1;
+}
+
+
+message Chain {
+  repeated string chain = 1;
+}
+
+message ChainAcceptedResponse {
+  bool accepted = 1;
+}
+
+
+message DataStoreList {
+  repeated string data_store_ids = 1;
+}
+
+
