@@ -29,6 +29,18 @@ def get_ip(ide):
     return f"{network}:{port_map[ide]}"
 
 
+def is_target_alive(target):
+    with grpc.insecure_channel(get_ip(target)) as channel:
+        try:
+            stub = node_pb2_grpc.ChainReplicationServiceStub(channel)
+            resp = stub.IsAliveCheck(node_pb2.Empty())
+            debug(f"Node with ip {get_ip(target)} is available, response {resp} ", flow="connection")
+            return resp and resp.alive
+        except grpc._channel._InactiveRpcError as e:
+            debug(f"Node with ip {get_ip(target)} is unavailable ", flow="connection")
+            return False
+
+
 class Node(node_pb2_grpc.ChainReplicationService):
 
     def __init__(self, id):
@@ -68,17 +80,6 @@ class Node(node_pb2_grpc.ChainReplicationService):
         self.data_stores.append(DataStore(self.idx, self.id))
         self.idx += 1
 
-    def is_target_alive(self, target):
-        with grpc.insecure_channel(get_ip(target)) as channel:
-            try:
-                stub = node_pb2_grpc.ChainReplicationServiceStub(channel)
-                resp = stub.IsAliveCheck(node_pb2.Empty())
-                debug(f"Node with ip {get_ip(target)} is available, response {resp} ", flow="connection")
-                return resp and resp.alive
-            except grpc._channel._InactiveRpcError as e:
-                debug(f"Node with ip {get_ip(target)} is unavailable ", flow="connection")
-                return False
-
     def get_target_nodes_data_stores(self, target):
         if target == self.id:
             debug(f"{self.data_stores}", flow="create_chain")
@@ -99,7 +100,7 @@ class Node(node_pb2_grpc.ChainReplicationService):
                 debug("id=k")
                 active_nodes.append(k)
             else:
-                if self.is_target_alive(k):
+                if is_target_alive(k):
                     active_nodes.append(k)
         return active_nodes
 
