@@ -5,6 +5,7 @@ service ChainReplicationService {
   rpc IsAliveCheck (Empty) returns (IsAliveResponse) {}
   rpc GetDataStores (Empty) returns (DataStoreList){}
   rpc TransferChain (Chain) returns (ChainAcceptedResponse){}
+  rpc WriteData (WriteRequest) returns (Empty){}
 }
 
 message Empty {}
@@ -23,9 +24,14 @@ message ChainAcceptedResponse {
   bool accepted = 1;
 }
 
-
 message DataStoreList {
   repeated string data_store_ids = 1;
+}
+
+message WriteRequest {
+  string book = 1;
+  float price = 2;
+  string id = 3;
 }
 
 

@@ -25,6 +25,7 @@ def run(args):
             p_args = []
         else:
             cmd, p_args = pars[0], pars[1:]
+        print(f"cmd = {cmd}, p_args = {p_args}")
         try:
             if cmd == "Local-store-ps":
                 assert_par_quantity(p_args, 1)
@@ -46,7 +47,6 @@ def run(args):
                 assert_par_quantity(p_args, 0)
                 node.list_chain()
 
-
             elif cmd == "List-books":
                 # TODO: Implement. Contact head data store and outputs its contents
                 raise NotImplementedError
@@ -56,8 +56,9 @@ def run(args):
                 raise NotImplementedError
 
             elif cmd == "Write-operation":
-                # TODO: Implement. Write to head and start to propagate newly written data in chain.
-                raise NotImplementedError
+                cleaned = p_args[0].strip('"<> ').split(',')
+                book, price = str(cleaned[0]), float(cleaned[1])
+                node.write({"book": book, "price": price})
 
             elif cmd == "Data-status":
                 # Todo: Not sure how to do that. Probably ask from head and tail and if they are different then it's dirty. Logical clock mby=

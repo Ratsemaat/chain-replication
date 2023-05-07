@@ -13,5 +13,12 @@ class DataStore:
         self.data = []
         self.next = None
         self.prev = None
+    
+    def write(self, data):
+        self.data.append(data)
+    
+    def get_owning_node(self):
+        return self.owner
+    
 
 

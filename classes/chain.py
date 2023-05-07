@@ -13,7 +13,8 @@ class Process:
     def get_owning_node(self):
         return self.ds.owner
 
-    def write(self):
+    def write(self, data):
+        self.ds.write(data)
         #TODO implement writing to node
         pass
 
@@ -46,6 +47,12 @@ class Chain:
     def get_random_node(self):
         idx = random.Random(42).randint(0, len(self.processes))
         return self.processes[idx]
+    
+    def get_next_store_and_node(self, node):
+        idx = self.processes.index(node)
+        if idx == len(self.processes) - 1:
+            return None, None
+        return self.processes[idx+1], self.processes[idx+1][4]
 
 
 
