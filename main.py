@@ -25,10 +25,9 @@ def run(args):
             p_args = []
         else:
             cmd, p_args = pars[0], pars[1:]
-
         try:
             if cmd == "Local-store-ps":
-                assert_par_quantity(pars, 1)
+                assert_par_quantity(p_args, 1)
                 amount = int(pars[1])
                 for i in range(amount):
                     node.init_new_data_store()
