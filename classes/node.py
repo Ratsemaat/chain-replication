@@ -65,7 +65,6 @@ class Node(node_pb2_grpc.ChainReplicationService):
         return node_pb2.DataStoreList(data_store_ids=stores_as_string.split(", "))
 
     def TransferChain(self, request, context):
-        debug(request.chain, flow="create_chain")
         self.chain = Chain()
         self.chain.processes = request.chain
         self.chain.head = request.head
@@ -97,9 +96,7 @@ class Node(node_pb2_grpc.ChainReplicationService):
         # TODO: Make  it parallel
         active_nodes = []
         for k in port_map.keys():
-            debug(k)
             if self.id == k:
-                debug("id=k")
                 active_nodes.append(k)
             else:
                 if is_target_alive(k):
@@ -112,7 +109,6 @@ class Node(node_pb2_grpc.ChainReplicationService):
 
         with grpc.insecure_channel(get_ip(target)) as channel:
             stub = node_pb2_grpc.ChainReplicationServiceStub(channel)
-            debug(f"chain: {str(self.chain).split(',')}", flow="create_chain")
             resp = stub.TransferChain(node_pb2.Chain(chain=str(self.chain).split(","), head=self.chain.head, tail=self.chain.tail))
             return resp.accepted
 
@@ -165,6 +161,8 @@ class Node(node_pb2_grpc.ChainReplicationService):
 
     def write(self, data, id=None):
         print(f"Writing {data} to {id}")
+        if self.chain.removed_head is not None:
+            self.chain.deviation += 1
         if self.chain is None:
             raise RuntimeError("Chain is not initialized")
         #Only with head
@@ -229,6 +227,10 @@ class Node(node_pb2_grpc.ChainReplicationService):
         # Check if datastore in current node -> this means more code but less grpc calls
         store = self.get_data_store_by_id(rand_id[-1])
         target_price = None
+
+        if self.chain.removed_head is not None:
+            self.chain.deviation += 1
+        
         if store != None:
             for nr, item in enumerate(store.data):
                 book = item.get("book")
@@ -260,6 +262,12 @@ class Node(node_pb2_grpc.ChainReplicationService):
     
     def remove_head(self):
         self.chain.remove_head()
+        nodes = self.get_active_nodes()
+        for node in nodes:
+            self.send_chain(node)
+    
+    def restore_head(self):
+        self.chain.restore_head()
         nodes = self.get_active_nodes()
         for node in nodes:
             self.send_chain(node)

@@ -73,8 +73,8 @@ def run(args):
                 node.remove_head()
 
             elif cmd == "Restore-head":
-                # Todo: Probably we need to implement some logical clock that is located at each data-store that keeps track of number of changes that have occured there.
-                raise NotImplementedError
+                assert_par_quantity(p_args, 0)
+                node.restore_head()
 
             else:
                 print(f"Invalid command: '{cmd}'")
