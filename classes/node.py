@@ -51,6 +51,7 @@ class Node(node_pb2_grpc.ChainReplicationService):
         self.id = id
         self.data_stores = []
         self.chain = None
+        self.timeout = 1
 
         debug(f"id = {self.id}, type = {type(id)}")
         self.server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
@@ -173,7 +174,6 @@ class Node(node_pb2_grpc.ChainReplicationService):
         if full_id is None:
             ds_local_id = int(self.chain.head[-1])
             node_id = int(self.chain.head[4])
-            print(node_id, ds_local_id)
             if node_id == self.id:
                 self.write(data, full_id=f"Node{node_id}id{ds_local_id}")
             else:
@@ -186,13 +186,12 @@ class Node(node_pb2_grpc.ChainReplicationService):
                 store.write(data)
 
             next_store, next_node = self.chain.get_next_store_and_node(str(store))
-            time.sleep(10)
+            time.sleep(self.timeout)
             if next_node is not None:
                 if next_node == self.id:
                     self.write(data, next_store)
                 else:
                     self.send_data(data, next_store, next_node)
-                    print("here")
                     store.mark_as_clean(data)
                     return node_pb2.Empty()
             else:
@@ -294,7 +293,6 @@ class Node(node_pb2_grpc.ChainReplicationService):
         is_local_data = int(node_id) == self.id
         if is_local_data:
             for ds in self.data_stores:
-                print(ds.get_data_status())
                 if ds.id == int(self.chain.head[-1]):
                     return ds.get_data_status()
         else:
