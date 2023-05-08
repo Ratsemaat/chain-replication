@@ -68,6 +68,8 @@ class Node(node_pb2_grpc.ChainReplicationService):
         debug(request.chain, flow="create_chain")
         self.chain = Chain()
         self.chain.processes = request.chain
+        self.chain.head = request.head
+        self.chain.tail = request.tail
         return node_pb2.ChainAcceptedResponse(accepted=True)
 
     def IsAliveCheck(self, request, context):
@@ -111,7 +113,7 @@ class Node(node_pb2_grpc.ChainReplicationService):
         with grpc.insecure_channel(get_ip(target)) as channel:
             stub = node_pb2_grpc.ChainReplicationServiceStub(channel)
             debug(f"chain: {str(self.chain).split(',')}", flow="create_chain")
-            resp = stub.TransferChain(node_pb2.Chain(chain=str(self.chain).split(",")))
+            resp = stub.TransferChain(node_pb2.Chain(chain=str(self.chain).split(","), head=self.chain.head, tail=self.chain.tail))
             return resp.accepted
 
     def create_chain(self):
@@ -255,4 +257,10 @@ class Node(node_pb2_grpc.ChainReplicationService):
                         print(f"Inconsistent data. {rand_id}: {target_price}, {head_id} (head): {price}")
         else:
             print("Not yet in the stock")
+    
+    def remove_head(self):
+        self.chain.remove_head()
+        nodes = self.get_active_nodes()
+        for node in nodes:
+            self.send_chain(node)
 

@@ -19,6 +19,8 @@ message IsAliveResponse {
 
 message Chain {
   repeated string chain = 1;
+  string head = 2;
+  string tail = 3;
 }
 
 message ChainAcceptedResponse {

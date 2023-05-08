@@ -44,6 +44,14 @@ class Chain:
         self.head=None
         self.tail=None
 
+    def remove_head(self):
+        self.processes.remove(self.head)
+        if len(self.processes) > 0:
+            self.head = self.processes[0]
+        else:
+            self.head = None
+            self.tail = None
+
     def get_random_node(self):
         idx = random.Random(42).randint(0, len(self.processes)-1)
         print(idx)
