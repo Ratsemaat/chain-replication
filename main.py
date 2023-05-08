@@ -68,7 +68,7 @@ def run(args):
 
             elif cmd == "Data-status":
                 for k,v in  node.get_data_status().items():
-                    print(f"{k}: {'clean' if v or v==Status.CLEAN else 'dirty'}")
+                    print(f"{k}: {'clean' if (v==True or v is Status.CLEAN) else 'dirty'}")
 
             elif cmd == "Remove-head":
                 assert_par_quantity(p_args, 0)
