@@ -1,7 +1,6 @@
 import json
 import random
 
-from classes.data_store import DataStore
 
 class Chain:
     def __str__(self):
@@ -66,4 +65,3 @@ class Chain:
         if index == len(self.processes) - 1:
             return None, None
         return self.processes[index+1], self.processes[index+1][4]
-        

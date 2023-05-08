@@ -40,6 +40,7 @@ message WriteRequest {
 message DataResponse {
   repeated string books = 1;
   repeated float prices = 2;
+  repeated bool is_clean =  3;
 }
 
 message NodeId {

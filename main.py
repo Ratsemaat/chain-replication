@@ -65,8 +65,8 @@ def run(args):
                 node.write({"book": book, "price": price})
 
             elif cmd == "Data-status":
-                # Todo: Not sure how to do that. Probably ask from head and tail and if they are different then it's dirty. Logical clock mby=
-                raise NotImplementedError
+                for k,v in  node.get_data_status().items():
+                    print(f"{k}: {'clean' if v else 'dirty'}")
 
             elif cmd == "Remove-head":
                 assert_par_quantity(p_args, 0)
