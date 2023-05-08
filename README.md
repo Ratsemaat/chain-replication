@@ -30,5 +30,7 @@ Our system consists of three nodes, each of which has a gRPC server that listens
 
 The **Node** class is the main class that represents each node in the network and contains the methods that implement the functionality of the system. Whenever a data store wants to exchange info with nearby data stores, it goes through the parent node. <br>
 
-The **Chain** class stores information about the chain of data stores in the network. Each node has access to the chain to retrieve information about the chain's topology. The **DataStore** class is used to store data in the system. Each node can have any number of data stores, which are during the chain creation randomly ordered.<br>
+The **Chain** class stores information about the chain of data stores in the network. Each node has access to the chain to retrieve information about the chain's topology.  <br>
+
+The **DataStore** class is used to store data in the system. Each node can have any number of data stores, which are during the chain creation randomly ordered.<br>
 ![image](https://user-images.githubusercontent.com/37042229/236919717-e4a24ed1-85d4-4b1b-a871-801ae53d8698.png)
