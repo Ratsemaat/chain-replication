@@ -3,26 +3,6 @@ import random
 
 from classes.data_store import DataStore
 
-
-class Process:
-    def __init__(self, ds: DataStore):
-        self.next = None
-        self.prev = None
-        self.ds = ds
-
-    def get_owning_node(self):
-        return self.ds.owner
-
-    def write(self, data):
-        self.ds.write(data)
-        #TODO implement writing to node
-        pass
-
-    def read(self):
-        #TODO implement reading
-        pass
-
-
 class Chain:
     def __str__(self):
         c = [str(p) for p in self.processes]
@@ -86,7 +66,4 @@ class Chain:
         if index == len(self.processes) - 1:
             return None, None
         return self.processes[index+1], self.processes[index+1][4]
-
-
-
-
+        

@@ -1,7 +1,10 @@
 import random
 from concurrent import futures
 from multiprocessing import Process
+import threading
 import grpc
+import time
+from threading import Timer
 
 import node_pb2
 import node_pb2_grpc
@@ -182,8 +185,10 @@ class Node(node_pb2_grpc.ChainReplicationService):
             next_store, next_node = self.chain.get_next_store_and_node(id)
             if next_node is not None:
                 if next_node == self.id:
+                    time.sleep(10)
                     self.write(data, next_store)
                 else:
+                    time.sleep(10)
                     return self.send_data(data, next_store, next_node)
             else:
                 return node_pb2.Empty()
