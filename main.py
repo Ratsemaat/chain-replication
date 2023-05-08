@@ -1,6 +1,8 @@
 import re
 import argparse
 import grpc
+
+from classes.data_store import Status
 from classes.node import Node
 
 
@@ -66,7 +68,7 @@ def run(args):
 
             elif cmd == "Data-status":
                 for k,v in  node.get_data_status().items():
-                    print(f"{k}: {'clean' if v else 'dirty'}")
+                    print(f"{k}: {'clean' if v or v==Status.CLEAN else 'dirty'}")
 
             elif cmd == "Remove-head":
                 assert_par_quantity(p_args, 0)
@@ -79,7 +81,7 @@ def run(args):
             else:
                 print(f"Invalid command: '{cmd}'")
         except ValueError as e:
-            print("Bad number of arguments." + e)
+            print("Bad number of arguments." + str(e))
 
 
 if __name__ == "__main__":
