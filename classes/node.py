@@ -1,7 +1,6 @@
 import random
 from concurrent import futures
 from multiprocessing import Process
-import threading
 import grpc
 import time
 from threading import Timer
@@ -51,6 +50,7 @@ class Node(node_pb2_grpc.ChainReplicationService):
         self.id = id
         self.data_stores = []
         self.chain = None
+        self.timeout = 1
 
         debug(f"id = {self.id}, type = {type(id)}")
         self.server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
@@ -173,7 +173,6 @@ class Node(node_pb2_grpc.ChainReplicationService):
         if full_id is None:
             ds_local_id = int(self.chain.head[-1])
             node_id = int(self.chain.head[4])
-            print(node_id, ds_local_id)
             if node_id == self.id:
                 self.write(data, full_id=f"Node{node_id}id{ds_local_id}")
             else:
@@ -186,12 +185,12 @@ class Node(node_pb2_grpc.ChainReplicationService):
                 store.write(data)
 
             next_store, next_node = self.chain.get_next_store_and_node(str(store))
-            print(next_store, next_node)
             if next_node is not None:
                 if next_node == self.id:
-                    time.sleep(10)
+                    time.sleep(self.timeout)
                     self.write(data, next_store)
                 else:
+                    time.sleep(self.timeout)
                     self.send_data(data, next_store, next_node)
                     store.mark_as_clean(data)
                     return node_pb2.Empty()
