@@ -154,6 +154,13 @@ class Node(node_pb2_grpc.ChainReplicationService):
     def WriteData(self, request, context):
         return self.write({'book': request.book, 'price': request.price}, request.id)
 
+    def send_data(self, data, store_id, node_id):
+        with grpc.insecure_channel(get_ip(int(node_id))) as channel:
+            stub = node_pb2_grpc.ChainReplicationServiceStub(channel)
+            resp = stub.WriteData(node_pb2.WriteRequest(
+                book=data['book'], price=data['price'], id=store_id))
+            return node_pb2.Empty()
+
     def write(self, data, id=None):
         print(f"Writing {data} to {id}")
         if self.chain is None:
@@ -165,10 +172,7 @@ class Node(node_pb2_grpc.ChainReplicationService):
             if node_id == self.id:
                 self.write(data, id)
             else:
-                with grpc.insecure_channel(get_ip(int(node_id))) as channel:
-                    stub = node_pb2_grpc.ChainReplicationServiceStub(channel)
-                    resp = stub.WriteData(node_pb2.WriteRequest(book=data['book'], price=data['price'], id=id))
-                    return node_pb2.Empty()
+                return self.send_data(data, id, node_id)
 
         if id is not None:
             store = self.get_data_store_by_id(id[-1])
@@ -180,10 +184,7 @@ class Node(node_pb2_grpc.ChainReplicationService):
                 if next_node == self.id:
                     self.write(data, next_store)
                 else:
-                    with grpc.insecure_channel(get_ip(int(next_node))) as channel:
-                        stub = node_pb2_grpc.ChainReplicationServiceStub(channel)
-                        resp = stub.WriteData(node_pb2.WriteRequest(book=data['book'], price=data['price'], id=next_store))
-                        return node_pb2.Empty()
+                    return self.send_data(data, next_store, next_node)
             else:
                 return node_pb2.Empty()
 
