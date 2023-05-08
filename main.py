@@ -55,13 +55,13 @@ def run(args):
                 node.list_books()
 
             elif cmd == "Read-operation":
-                assert_par_quantity(p_args, 1)
-                cleaned = pars[1].replace('"', '')
+                joined = " ".join(p_args)
+                cleaned = joined.replace('"', '')
                 node.read(cleaned)
 
             elif cmd == "Write-operation":
-                assert_par_quantity(p_args, 1)
-                cleaned = p_args[0].replace(
+                joined = " ".join(p_args)
+                cleaned = joined.replace(
                     '<', '').replace('>', '').replace('"', '').split(',')
                 book, price = str(cleaned[0]), float(cleaned[1])
                 node.write({"book": book, "price": price})
