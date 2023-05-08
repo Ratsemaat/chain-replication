@@ -16,14 +16,14 @@ Run three python progams:
 |  Local-store-ps  |     n      |        Initalizes n data stores        |
 |  Create-chain    |     -      |             Creates chain              |
 |   List-chain   |     -      |            Prints the chain            |
-|    Write-operation    |    TODO    |    Writes data to head of the chain    |
+|    Write-operation    |    <title,price>    |    Writes data to head of the chain    |
 |    List-books   |     -      |         List contents of chain         |
-|  Read-operation   |     TODO      | Reads data from one of the chain links |
+|  Read-operation   |     title      | Reads data from one of the chain links |
 |   Data-status   |     -      |        Outputs the data status         |
 | Remove-head |     -      |              Removes head              |
 | Restore-head |     -      |             Restores head              |
 
 ## Architecture
 
-TODO
-README test
+
+Our system consists of three nodes, each of which has a gRPC server that listens for incoming requests from other nodes in the network. In principle our application generalizes for networks with more nodes, but for this demo solution, we only looked at the case with 3 nodes. The Node class is the main class that represents each node in the network and contains the methods that implement the functionality of the system. Whenever a data store wants to exchange info with nearby data stores, it goes through the parent node. The Chain class stores information about the chain of data stores in the network. Each node has access to the chain to retrieve information about the chain's topology. The DataStore class is used to store data in the system. Each node can have any number of data stores, which are during the chain creation randomly ordered.
