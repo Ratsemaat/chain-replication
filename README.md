@@ -1,6 +1,5 @@
 # chain-replication
-Homework in the course Distributed System at University of Tartu
-
+Second Homework in the course Distributed System.
 ## Quick startup 
 Run three python progams:
 
