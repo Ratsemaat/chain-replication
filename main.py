@@ -49,8 +49,8 @@ def run(args):
                 node.list_chain()
 
             elif cmd == "List-books":
-                # TODO: Implement. Contact head data store and outputs its contents
-                raise NotImplementedError
+                assert_par_quantity(p_args, 0)
+                node.list_books()
 
             elif cmd == "Read-operation":
                 # TODO: Implement. Ask from random node. Node asks data from head to assure cleanliness?.

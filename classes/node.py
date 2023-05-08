@@ -187,4 +187,31 @@ class Node(node_pb2_grpc.ChainReplicationService):
                     return self.send_data(data, next_store, next_node)
             else:
                 return node_pb2.Empty()
+                
+    def get_data(self, store_id, node_id):
+        with grpc.insecure_channel(get_ip(int(node_id))) as channel:
+            stub = node_pb2_grpc.ChainReplicationServiceStub(channel)
+            store = self.get_data_store_by_id(store_id[-1])
+            titles = []
+            prices = []
+            for item in store.data:
+                titles.append(item.get("book"))
+                prices.append(item.get("price"))    
+            return stub.SendData(node_pb2.DataResponse(books=titles, prices=prices))
+    
+    def list_books(self):
+        head_id = self.chain.head
+        # Check if datastore in current node
+        store = self.get_data_store_by_id(head_id[-1])
+        if store != None:
+            for nr, item in enumerate(store.data):
+                book = item.get("book")
+                price = item.get("price")
+                nr+=1
+                print(f"  {nr})  {book} = {price} EUR")
+            return
+        # Get from head node
+        books, prices = get_data(self, head_id, int(head_id[4]))
+        for nr, (book, price) in enumerate(zip(books, prices)):
+            print(f"{nr})  {book} = {price} EUR")
 
