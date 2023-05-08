@@ -49,9 +49,7 @@ class Chain:
         self.deviation = 0
 
     def get_random_node(self):
-        idx = random.Random(42).randint(0, len(self.processes)-1)
-        print(idx)
-        print(self.processes)
+        idx = random.Random().randint(0, len(self.processes)-1)
         return self.processes[idx]
     
     def get_next_store_and_node(self, node):

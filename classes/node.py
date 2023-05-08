@@ -219,9 +219,11 @@ class Node(node_pb2_grpc.ChainReplicationService):
             return resp.books, resp.prices, resp.is_clean
 
     def list_books(self):
-        head_id = self.chain.head
-        # Check if datastore in current node
-        store = self.get_data_store_by_id(head_id[-1])
+        head_id = str(self.chain.head)
+        # Check if datastore is in current node
+        store = None
+        if head_id in [ds.__repr__() for ds in self.data_stores]:
+            store = self.get_data_store_by_id(head_id[-1])
         if store != None:
             for nr, item in enumerate(store.data):
                 book = item.get("book")
@@ -230,17 +232,18 @@ class Node(node_pb2_grpc.ChainReplicationService):
                 print(f"  {nr})  {book} = {price} EUR")
             return
         # Get from head node
-        books, prices = self.get_data(head_id, int(head_id[4]))
+        books, prices, cleanliness = self.get_data(head_id, int(head_id[4]))
         for nr, (book, price) in enumerate(zip(books, prices)):
             nr+=1
             print(f"  {nr})  {book} = {price} EUR")
             
     def read(self, target_book):
-        #TODO: refactor
-        # Ask from a random node (or current node for simplicity?)
+        # Ask from a random node
         rand_id = self.chain.get_random_node()
         # Check if datastore in current node -> this means more code but less grpc calls
-        store = self.get_data_store_by_id(rand_id[-1])
+        store = None
+        if rand_id in [ds.__repr__() for ds in self.data_stores]:
+            store = self.get_data_store_by_id(rand_id[-1])
         target_price = None
 
         if self.chain.removed_head is not None:
