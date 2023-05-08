@@ -53,8 +53,9 @@ def run(args):
                 node.list_books()
 
             elif cmd == "Read-operation":
-                # TODO: Implement. Ask from random node. Node asks data from head to assure cleanliness?.
-                raise NotImplementedError
+                assert_par_quantity(p_args, 1)
+                cleaned = pars[1].replace('"', '')
+                node.read(cleaned)
 
             elif cmd == "Write-operation":
                 cleaned = p_args[0].replace(

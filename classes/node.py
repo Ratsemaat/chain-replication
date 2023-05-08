@@ -188,16 +188,20 @@ class Node(node_pb2_grpc.ChainReplicationService):
             else:
                 return node_pb2.Empty()
                 
+    def SendData(self, request, context):
+        store = self.get_data_store_by_id(request.store_id[-1])
+        titles = []
+        prices = []
+        for item in store.data:
+            titles.append(item.get("book"))
+            prices.append(item.get("price"))
+        return node_pb2.DataResponse(books=titles, prices=prices)
+    
     def get_data(self, store_id, node_id):
         with grpc.insecure_channel(get_ip(int(node_id))) as channel:
             stub = node_pb2_grpc.ChainReplicationServiceStub(channel)
-            store = self.get_data_store_by_id(store_id[-1])
-            titles = []
-            prices = []
-            for item in store.data:
-                titles.append(item.get("book"))
-                prices.append(item.get("price"))    
-            return stub.SendData(node_pb2.DataResponse(books=titles, prices=prices))
+            resp = stub.SendData(node_pb2.NodeId(store_id=store_id, node_id=node_id))
+            return resp.books, resp.prices
     
     def list_books(self):
         head_id = self.chain.head
@@ -211,7 +215,44 @@ class Node(node_pb2_grpc.ChainReplicationService):
                 print(f"  {nr})  {book} = {price} EUR")
             return
         # Get from head node
-        books, prices = get_data(self, head_id, int(head_id[4]))
+        books, prices = self.get_data(head_id, int(head_id[4]))
         for nr, (book, price) in enumerate(zip(books, prices)):
-            print(f"{nr})  {book} = {price} EUR")
+            nr+=1
+            print(f"  {nr})  {book} = {price} EUR")
+            
+    def read(self, target_book):
+        #TODO: refactor
+        # Ask from a random node (or current node for simplicity?)
+        rand_id = self.chain.get_random_node()
+        # Check if datastore in current node -> this means more code but less grpc calls
+        store = self.get_data_store_by_id(rand_id[-1])
+        target_price = None
+        if store != None:
+            for nr, item in enumerate(store.data):
+                book = item.get("book")
+                price = item.get("price")
+                if book.lower() == target_book.lower():
+                    target_price = price
+                    break
+        else:
+            books, prices = self.get_data(head_id, int(head_id[4]))
+            for nr, (book, price) in enumerate(zip(books, prices)):
+                if book.lower() == target_book.lower():
+                    target_price = price
+                    break
+        # Check with head
+        head_id = self.chain.head
+        if rand_id == head_id and target_price != None:
+            print(f"{target_price} EUR")
+            return
+        elif rand_id != head_id and target_price != None:
+            books, prices = self.get_data(head_id, int(head_id[4]))
+            for book, price in zip(books, prices):
+                if book == target_book:
+                    if price == target_price:
+                        print(f"{target_price} EUR")
+                    else:
+                        print(f"Inconsistent data. {rand_id}: {target_price}, {head_id} (head): {price}")
+        else:
+            print("Not yet in the stock")
 

@@ -6,7 +6,7 @@ service ChainReplicationService {
   rpc GetDataStores (Empty) returns (DataStoreList){}
   rpc TransferChain (Chain) returns (ChainAcceptedResponse){}
   rpc WriteData (WriteRequest) returns (Empty){}
-  rpc SendData (Empty) returns (DataResponse) {}
+  rpc SendData (NodeId) returns (DataResponse) {}
 }
 
 message Empty {}
@@ -38,6 +38,11 @@ message WriteRequest {
 message DataResponse {
   repeated string books = 1;
   repeated float prices = 2;
+}
+
+message NodeId {
+  string store_id = 1;
+  int64 node_id = 2;
 }
 
 
