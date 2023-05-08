@@ -26,3 +26,4 @@ Run three python progams:
 ## Architecture
 
 TODO
+README test
