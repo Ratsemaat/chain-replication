@@ -3,8 +3,6 @@ import random
 
 
 class Chain:
-
-
     def __str__(self):
         c = [str(p) for p in self.processes]
         return ",".join(c)
@@ -22,6 +20,33 @@ class Chain:
         self.processes=[]
         self.head=None
         self.tail=None
+        self.deviation=0
+        self.removed_head=None
+
+    def remove_head(self):
+        if len(self.processes) > 0:
+            self.processes.remove(self.head)
+            self.removed_head = self.head
+            self.deviation = 0
+            self.head = self.processes[0]
+        else:
+            self.head = None
+            self.tail = None
+            print("There is no head to remove")
+            return
+    
+    def restore_head(self):
+        if self.removed_head is None:
+            print("There is no head to restore")
+            return
+        if self.deviation > 5:
+            self.deviation = 0
+            print("Deviation is too big, the lastly removed head is permanently removed")
+            return
+        self.processes.insert(0, self.removed_head)
+        self.head = self.removed_head
+        self.removed_head = None
+        self.deviation = 0
 
     def get_random_node(self):
         idx = random.Random(42).randint(0, len(self.processes)-1)

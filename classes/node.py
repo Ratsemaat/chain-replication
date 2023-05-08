@@ -65,13 +65,10 @@ class Node(node_pb2_grpc.ChainReplicationService):
         return node_pb2.DataStoreList(data_store_ids=stores_as_string.split(", "))
 
     def TransferChain(self, request, context):
-        debug(request.chain, flow="create_chain")
         self.chain = Chain()
         self.chain.processes = request.chain
-        if len(self.chain.processes) > 0:
-            self.chain.head = self.chain.processes[0]
-        elif len(self.chain.processes) > 1:
-            self.chain.head = self.chain.processes[-1]
+        self.chain.head = request.head
+        self.chain.tail = request.tail
         return node_pb2.ChainAcceptedResponse(accepted=True)
 
     def IsAliveCheck(self, request, context):
@@ -98,9 +95,7 @@ class Node(node_pb2_grpc.ChainReplicationService):
     def get_active_nodes(self):
         active_nodes = []
         for k in port_map.keys():
-            debug(k)
             if self.id == k:
-                debug("id=k")
                 active_nodes.append(k)
             else:
                 if is_target_alive(k):
@@ -113,8 +108,7 @@ class Node(node_pb2_grpc.ChainReplicationService):
 
         with grpc.insecure_channel(get_ip(target)) as channel:
             stub = node_pb2_grpc.ChainReplicationServiceStub(channel)
-            debug(f"chain: {str(self.chain).split(',')}", flow="create_chain")
-            resp = stub.TransferChain(node_pb2.Chain(chain=str(self.chain).split(",")))
+            resp = stub.TransferChain(node_pb2.Chain(chain=str(self.chain).split(","), head=self.chain.head, tail=self.chain.tail))
             return resp.accepted
 
     def create_chain(self):
@@ -162,13 +156,14 @@ class Node(node_pb2_grpc.ChainReplicationService):
     def send_data(self, data, store_id, node_id):
         with grpc.insecure_channel(get_ip(int(node_id))) as channel:
             stub = node_pb2_grpc.ChainReplicationServiceStub(channel)
-            print(data, store_id, node_id)
             resp = stub.WriteData(node_pb2.WriteRequest(
                 book=data['book'], price=data['price'], id=str(store_id)))
             return node_pb2.Empty()
 
     def write(self, data, full_id=None):
         print(f"Writing {data} to {full_id}")
+        if self.chain.removed_head is not None:
+            self.chain.deviation += 1
         if self.chain is None:
             raise RuntimeError("Chain is not initialized")
         # Only with head
@@ -201,9 +196,7 @@ class Node(node_pb2_grpc.ChainReplicationService):
                 return node_pb2.Empty()
 
     def SendData(self, request, context):
-        print("hi")
         store = self.get_data_store_by_id(request.store_id[-1])
-        print(store)
         titles = []
         prices = []
         cleanliness = []
@@ -229,22 +222,26 @@ class Node(node_pb2_grpc.ChainReplicationService):
             for nr, item in enumerate(store.data):
                 book = item.get("book")
                 price = item.get("price")
-                nr += 1
+                nr+=1
                 print(f"  {nr})  {book} = {price} EUR")
             return
         # Get from head node
         books, prices = self.get_data(head_id, int(head_id[4]))
         for nr, (book, price) in enumerate(zip(books, prices)):
-            nr += 1
+            nr+=1
             print(f"  {nr})  {book} = {price} EUR")
-
+            
     def read(self, target_book):
-        # TODO: refactor
+        #TODO: refactor
         # Ask from a random node (or current node for simplicity?)
         rand_id = self.chain.get_random_node()
         # Check if datastore in current node -> this means more code but less grpc calls
         store = self.get_data_store_by_id(rand_id[-1])
         target_price = None
+
+        if self.chain.removed_head is not None:
+            self.chain.deviation += 1
+        
         if store != None:
             for nr, item in enumerate(store.data):
                 book = item.get("book")
@@ -274,6 +271,18 @@ class Node(node_pb2_grpc.ChainReplicationService):
                         print(f"Inconsistent data. {rand_id}: {target_price}, {head_id} (head): {price}")
         else:
             print("Not yet in the stock")
+    
+    def remove_head(self):
+        self.chain.remove_head()
+        nodes = self.get_active_nodes()
+        for node in nodes:
+            self.send_chain(node)
+    
+    def restore_head(self):
+        self.chain.restore_head()
+        nodes = self.get_active_nodes()
+        for node in nodes:
+            self.send_chain(node)
 
     def get_data_status(self):
         node_id, ds_local_id = self.chain.head[4], self.chain.head[-1]
