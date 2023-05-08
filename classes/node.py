@@ -186,13 +186,13 @@ class Node(node_pb2_grpc.ChainReplicationService):
                 store.write(data)
 
             next_store, next_node = self.chain.get_next_store_and_node(str(store))
-            print(next_store, next_node)
+            time.sleep(10)
             if next_node is not None:
                 if next_node == self.id:
-                    time.sleep(10)
                     self.write(data, next_store)
                 else:
                     self.send_data(data, next_store, next_node)
+                    print("here")
                     store.mark_as_clean(data)
                     return node_pb2.Empty()
             else:
@@ -294,9 +294,9 @@ class Node(node_pb2_grpc.ChainReplicationService):
         is_local_data = int(node_id) == self.id
         if is_local_data:
             for ds in self.data_stores:
+                print(ds.get_data_status())
                 if ds.id == int(self.chain.head[-1]):
-                    books, prices, status= ds.get_data_status()
-                    dict(zip(books, status))
+                    return ds.get_data_status()
         else:
             books, prices, status=self.get_data(self.chain.head, int(node_id))
             return dict(zip(books, status))
