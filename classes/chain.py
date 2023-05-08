@@ -49,10 +49,16 @@ class Chain:
         return self.processes[idx]
     
     def get_next_store_and_node(self, node):
-        idx = self.processes.index(node)
-        if idx == len(self.processes) - 1:
+        index = -1
+        for i in range(len(self.processes)):
+            p = self.processes[i]
+            if p == node:
+                index = i
+                break
+            
+        if index == len(self.processes) - 1:
             return None, None
-        return self.processes[idx+1], self.processes[idx+1][4]
+        return self.processes[index+1], self.processes[index+1][4]
 
 
 

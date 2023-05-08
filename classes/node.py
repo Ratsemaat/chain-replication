@@ -152,22 +152,30 @@ class Node(node_pb2_grpc.ChainReplicationService):
         return None
 
     def WriteData(self, request, context):
-        self.write({'book': request.book, 'price': request.price}, request.id)
-        return node_pb2.Empty()
+        return self.write({'book': request.book, 'price': request.price}, request.id)
 
     def write(self, data, id=None):
         print(f"Writing {data} to {id}")
         if self.chain is None:
             raise RuntimeError("Chain is not initialized")
+        #Only with head
         if id is None:
             id = self.chain.head
-            self.write(data, id)
+            node_id = id[4]
+            if node_id == self.id:
+                self.write(data, id)
+            else:
+                with grpc.insecure_channel(get_ip(int(node_id))) as channel:
+                    stub = node_pb2_grpc.ChainReplicationServiceStub(channel)
+                    resp = stub.WriteData(node_pb2.WriteRequest(book=data['book'], price=data['price'], id=id))
+                    return node_pb2.Empty()
+
         if id is not None:
             store = self.get_data_store_by_id(id[-1])
             if store is not None:
                 store.write(data)
+            
             next_store, next_node = self.chain.get_next_store_and_node(id)
-            print(f"next_store: {next_store}, next_node: {next_node}")
             if next_node is not None:
                 if next_node == self.id:
                     self.write(data, next_store)
@@ -175,7 +183,7 @@ class Node(node_pb2_grpc.ChainReplicationService):
                     with grpc.insecure_channel(get_ip(int(next_node))) as channel:
                         stub = node_pb2_grpc.ChainReplicationServiceStub(channel)
                         resp = stub.WriteData(node_pb2.WriteRequest(book=data['book'], price=data['price'], id=next_store))
-                        debug(f"Write response: {resp}", flow="all")
+                        return node_pb2.Empty()
             else:
-                print("reached tail")
+                return node_pb2.Empty()
 

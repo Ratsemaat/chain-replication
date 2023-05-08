@@ -1,3 +1,4 @@
+import re
 import argparse
 import grpc
 from classes.node import Node
@@ -56,7 +57,8 @@ def run(args):
                 raise NotImplementedError
 
             elif cmd == "Write-operation":
-                cleaned = p_args[0].strip('"<> ').split(',')
+                cleaned = p_args[0].replace(
+                    '<', '').replace('>', '').replace('"', '').split(',')
                 book, price = str(cleaned[0]), float(cleaned[1])
                 node.write({"book": book, "price": price})
 
