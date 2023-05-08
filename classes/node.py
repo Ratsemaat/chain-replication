@@ -6,7 +6,7 @@ import grpc
 import node_pb2
 import node_pb2_grpc
 from classes.chain import Chain
-from classes.data_store import DataStore
+from classes.data_store import DataStore, Status
 
 network = "localhost"
 
@@ -68,6 +68,10 @@ class Node(node_pb2_grpc.ChainReplicationService):
         debug(request.chain, flow="create_chain")
         self.chain = Chain()
         self.chain.processes = request.chain
+        if len(self.chain.processes) > 0:
+            self.chain.head = self.chain.processes[0]
+        elif len(self.chain.processes) > 1:
+            self.chain.head = self.chain.processes[-1]
         return node_pb2.ChainAcceptedResponse(accepted=True)
 
     def IsAliveCheck(self, request, context):
@@ -92,7 +96,6 @@ class Node(node_pb2_grpc.ChainReplicationService):
             return resp.data_store_ids
 
     def get_active_nodes(self):
-        # TODO: Make  it parallel
         active_nodes = []
         for k in port_map.keys():
             debug(k)
@@ -115,6 +118,9 @@ class Node(node_pb2_grpc.ChainReplicationService):
             return resp.accepted
 
     def create_chain(self):
+        if self.chain != None:
+            print("Chain already created")
+            return
         nodes = self.get_active_nodes()
         debug(f"Active nodes: {nodes}", flow="create_chain")
         stores = []
@@ -129,13 +135,12 @@ class Node(node_pb2_grpc.ChainReplicationService):
         self.chain = Chain()
         if len(stores) == 0:
             raise RuntimeError("Failed to create the chain. No datastores found.")
-        
-        self.chain.head = stores[0]
-        self.chain.tail = stores[-1]
+
+        self.chain.head = str(stores[0])
+        self.chain.tail = str(stores[-1])
         self.chain.processes = [str(store) for store in stores]
 
         all_accepted = True
-        # TODO: sent acknowledgement that about chain creation result
         for node in nodes:
             all_accepted = all_accepted and self.send_chain(node)
 
@@ -157,52 +162,65 @@ class Node(node_pb2_grpc.ChainReplicationService):
     def send_data(self, data, store_id, node_id):
         with grpc.insecure_channel(get_ip(int(node_id))) as channel:
             stub = node_pb2_grpc.ChainReplicationServiceStub(channel)
+            print(data, store_id, node_id)
             resp = stub.WriteData(node_pb2.WriteRequest(
-                book=data['book'], price=data['price'], id=store_id))
+                book=data['book'], price=data['price'], id=str(store_id)))
             return node_pb2.Empty()
 
-    def write(self, data, id=None):
-        print(f"Writing {data} to {id}")
+    def write(self, data, full_id=None):
+        print(f"Writing {data} to {full_id}")
         if self.chain is None:
             raise RuntimeError("Chain is not initialized")
-        #Only with head
-        if id is None:
-            id = self.chain.head
-            node_id = id[4]
+        # Only with head
+        if full_id is None:
+            ds_local_id = int(self.chain.head[-1])
+            node_id = int(self.chain.head[4])
+            print(node_id, ds_local_id)
             if node_id == self.id:
-                self.write(data, id)
+                self.write(data, full_id=f"Node{node_id}id{ds_local_id}")
             else:
-                return self.send_data(data, id, node_id)
+                self.send_data(data, ds_local_id, node_id)
+                return node_pb2.Empty()
 
-        if id is not None:
-            store = self.get_data_store_by_id(id[-1])
+        if full_id is not None:
+            store = self.get_data_store_by_id(full_id[-1])
             if store is not None:
                 store.write(data)
-            
-            next_store, next_node = self.chain.get_next_store_and_node(id)
+
+            next_store, next_node = self.chain.get_next_store_and_node(str(store))
+            print(next_store, next_node)
             if next_node is not None:
                 if next_node == self.id:
                     self.write(data, next_store)
                 else:
-                    return self.send_data(data, next_store, next_node)
+                    self.send_data(data, next_store, next_node)
+                    store.mark_as_clean(data)
+                    return node_pb2.Empty()
             else:
+                store.mark_as_clean(data)
                 return node_pb2.Empty()
-                
+
     def SendData(self, request, context):
+        print("hi")
         store = self.get_data_store_by_id(request.store_id[-1])
+        print(store)
         titles = []
         prices = []
+        cleanliness = []
+        temp = store.get_data_status()
+        print(temp)
         for item in store.data:
             titles.append(item.get("book"))
             prices.append(item.get("price"))
-        return node_pb2.DataResponse(books=titles, prices=prices)
-    
+            cleanliness.append(temp[item.get("book")] == Status.CLEAN)
+        return node_pb2.DataResponse(books=titles, prices=prices, is_clean=cleanliness)
+
     def get_data(self, store_id, node_id):
         with grpc.insecure_channel(get_ip(int(node_id))) as channel:
             stub = node_pb2_grpc.ChainReplicationServiceStub(channel)
             resp = stub.SendData(node_pb2.NodeId(store_id=store_id, node_id=node_id))
-            return resp.books, resp.prices
-    
+            return resp.books, resp.prices, resp.is_clean
+
     def list_books(self):
         head_id = self.chain.head
         # Check if datastore in current node
@@ -211,17 +229,17 @@ class Node(node_pb2_grpc.ChainReplicationService):
             for nr, item in enumerate(store.data):
                 book = item.get("book")
                 price = item.get("price")
-                nr+=1
+                nr += 1
                 print(f"  {nr})  {book} = {price} EUR")
             return
         # Get from head node
         books, prices = self.get_data(head_id, int(head_id[4]))
         for nr, (book, price) in enumerate(zip(books, prices)):
-            nr+=1
+            nr += 1
             print(f"  {nr})  {book} = {price} EUR")
-            
+
     def read(self, target_book):
-        #TODO: refactor
+        # TODO: refactor
         # Ask from a random node (or current node for simplicity?)
         rand_id = self.chain.get_random_node()
         # Check if datastore in current node -> this means more code but less grpc calls
@@ -235,7 +253,8 @@ class Node(node_pb2_grpc.ChainReplicationService):
                     target_price = price
                     break
         else:
-            books, prices = self.get_data(head_id, int(head_id[4]))
+            head_id = self.chain.head
+            books, prices, cleanliness = self.get_data(head_id, int(head_id[4]))
             for nr, (book, price) in enumerate(zip(books, prices)):
                 if book.lower() == target_book.lower():
                     target_price = price
@@ -246,7 +265,7 @@ class Node(node_pb2_grpc.ChainReplicationService):
             print(f"{target_price} EUR")
             return
         elif rand_id != head_id and target_price != None:
-            books, prices = self.get_data(head_id, int(head_id[4]))
+            books, prices,cleanliness = self.get_data(head_id, int(head_id[4]))
             for book, price in zip(books, prices):
                 if book == target_book:
                     if price == target_price:
@@ -255,4 +274,17 @@ class Node(node_pb2_grpc.ChainReplicationService):
                         print(f"Inconsistent data. {rand_id}: {target_price}, {head_id} (head): {price}")
         else:
             print("Not yet in the stock")
+
+    def get_data_status(self):
+        node_id, ds_local_id = self.chain.head[4], self.chain.head[-1]
+
+        is_local_data = int(node_id) == self.id
+        if is_local_data:
+            for ds in self.data_stores:
+                if ds.id == int(self.chain.head[-1]):
+                    books, prices, status= ds.get_data_status()
+                    dict(zip(books, status))
+        else:
+            books, prices, status=self.get_data(self.chain.head, int(node_id))
+            return dict(zip(books, status))
 
